@@ -61,7 +61,7 @@ public class NoteController {
     }
   }
 
-  @DeleteMapping()
+  @DeleteMapping
   public void deleteNote(
       @RequestHeader(name = AUTHENTICATED_USER_ID) final String userId,
       @RequestParam final String path
