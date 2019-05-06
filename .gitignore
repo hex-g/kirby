@@ -1,5 +1,6 @@
 ### Project ###
 /db/
+/kirby-storage/
 
 ### Spring Initializr ###
 HELP.md
