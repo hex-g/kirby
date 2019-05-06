@@ -34,9 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class NoteControllerTest {
   @Value("${hive.kirby.storage-directory}")
   private String rootDir;
-
   private String userId;
-
   private MockMvc mockMvc;
 
   @Before
@@ -121,12 +119,29 @@ public class NoteControllerTest {
                   .contentType(MediaType.APPLICATION_JSON))
           .andReturn();
 
-      var actual = new ObjectMapper().readValue(result.getResponse().getContentAsString(), Note.class);
+      var actual =
+          new ObjectMapper().readValue(result.getResponse().getContentAsString(), Note.class);
 
       assertEquals(path, actual.getPath());
       assertEquals(fileContent, actual.getContent());
     } finally {
       deleteCreatedFiles();
+    }
+  }
+
+  private void deleteCreatedFiles() {
+    try {
+      var p = Paths.get(rootDir, userId);
+      if (Files.exists(p)) {
+        //noinspection ResultOfMethodCallIgnored
+        Files.walk(p)
+            .sorted(Comparator.reverseOrder())
+            .map(Path::toFile)
+            .forEach(File::delete);
+      }
+    } catch (IOException e) {
+      System.err.println(
+          "Created files could not be deleted. Root directory name: " + userId + ".");
     }
   }
 
@@ -237,20 +252,5 @@ public class NoteControllerTest {
                 .param("path", "a/valid/path/to/a/file")
         )
         .andExpect(status().isOk());
-  }
-
-  private void deleteCreatedFiles() {
-    try {
-      var p = Paths.get(rootDir, userId);
-      if (Files.exists(p)) {
-        //noinspection ResultOfMethodCallIgnored
-        Files.walk(p)
-            .sorted(Comparator.reverseOrder())
-            .map(Path::toFile)
-            .forEach(File::delete);
-      }
-    } catch (IOException e) {
-      System.err.println("Created files could not be deleted. Root directory name: " + userId + ".");
-    }
   }
 }
