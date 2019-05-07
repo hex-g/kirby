@@ -24,8 +24,7 @@ import java.util.Comparator;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static hive.pandora.constant.HiveInternalHeaders.AUTHENTICATED_USER_ID;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,16 +33,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class NoteControllerTest {
   @Value("${hive.kirby.storage-directory}")
   private String rootDir;
-
   private String userId;
-
   private MockMvc mockMvc;
 
   @Before
   public void setup() {
-    userId = Integer.toString(ThreadLocalRandom.current().nextInt());
+    userId = Integer.toString(ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
 
-    var noteController = new NoteController();
+    final var noteController = new NoteController();
 
     ReflectionTestUtils.setField(noteController, "rootDir", rootDir);
 
@@ -76,10 +73,10 @@ public class NoteControllerTest {
 
   @Test
   public void givenPathIsValidAndNoteExists_whenNoteIsRetrieved_then200IsReceived() throws Exception {
-    var id = userId;
-    var dirs = rootDir + "/" + id + "/a/valid/path/to/a";
-    var fullPath = dirs + "/file";
-    var path = "a/valid/path/to/a/file";
+    final var id = userId;
+    final var dirs = rootDir + "/" + id + "/a/valid/path/to/a";
+    final var fullPath = dirs + "/file";
+    final var path = "a/valid/path/to/a/file";
 
     try {
       Files.createDirectories(Paths.get(dirs));
@@ -97,36 +94,20 @@ public class NoteControllerTest {
     }
   }
 
-  @Test
-  public void givenPathIsValidAndNoteExists_whenNoteIsRetrieved_thenRetrievedResourceIsCorrect() throws Exception {
-    var dirs = rootDir + "/" + userId + "/a/valid/path/to/a";
-    var fullPath = dirs + "/file";
-    var path = "a/valid/path/to/a/file";
-    var fileContent = RandomStringUtils.randomAscii(2048);
+  private void deleteCreatedFiles() {
+    final var p = Paths.get(rootDir, userId);
 
     try {
-      Files.createDirectories(Paths.get(dirs));
-      Files.createFile(Paths.get(fullPath));
-      try (var fileOutputStream = new FileOutputStream(fullPath)) {
-        fileOutputStream.write(fileContent.getBytes());
-      } catch (IOException e) {
-        System.err.println("Could not write to created file. File: " + fullPath);
+      if (Files.exists(p)) {
+        //noinspection ResultOfMethodCallIgnored
+        Files.walk(p)
+            .sorted(Comparator.reverseOrder())
+            .map(Path::toFile)
+            .forEach(File::delete);
       }
-
-      var result = mockMvc
-          .perform(
-              get("/note")
-                  .header(AUTHENTICATED_USER_ID, userId)
-                  .param("path", path)
-                  .contentType(MediaType.APPLICATION_JSON))
-          .andReturn();
-
-      var actual = new ObjectMapper().readValue(result.getResponse().getContentAsString(), Note.class);
-
-      assertEquals(path, actual.getPath());
-      assertEquals(fileContent, actual.getContent());
-    } finally {
-      deleteCreatedFiles();
+    } catch (IOException e) {
+      System.err.println(
+          "Created files could not be deleted. Root directory name: " + userId + ".");
     }
   }
 
@@ -164,42 +145,47 @@ public class NoteControllerTest {
   }
 
   @Test
-  public void givenPathIsValidAndFileDoesNotExist_whenNoteIsSaved_thenFileIsCreatedWithNoteContent() throws Exception {
-    var dirs = rootDir + "/" + userId + "/a/valid/path/to/a";
-    var fullPath = dirs + "/file";
-    var path = "a/valid/path/to/a/file";
-    var fileContent = RandomStringUtils.randomAscii(2048);
+  public void givenPathIsValidAndNoteExists_whenNoteIsRetrieved_thenRetrievedResourceIsCorrect() throws Exception {
+    final var dirs = rootDir + "/" + userId + "/a/valid/path/to/a";
+    final var fullPath = dirs + "/file";
+    final var path = "a/valid/path/to/a/file";
+    final var fileContent = RandomStringUtils.randomAscii(2048);
 
     try {
-      mockMvc
+      Files.createDirectories(Paths.get(dirs));
+      Files.createFile(Paths.get(fullPath));
+      try (var fileOutputStream = new FileOutputStream(fullPath)) {
+        fileOutputStream.write(fileContent.getBytes());
+      } catch (IOException e) {
+        System.err.println("Could not write to created file. File: " + fullPath);
+      }
+
+      final var result = mockMvc
           .perform(
-              post("/note")
+              get("/note")
                   .header(AUTHENTICATED_USER_ID, userId)
-                  .contentType("application/json")
-                  .content(new ObjectMapper().writeValueAsString(
-                      new Note(path, fileContent)
-                  ))
-          );
+                  .param("path", path)
+                  .contentType(MediaType.APPLICATION_JSON))
+          .andReturn();
 
-      var p = Paths.get(fullPath);
-      assertTrue(Files.exists(p));
+      final var actual =
+          new ObjectMapper().readValue(result.getResponse().getContentAsString(), Note.class);
 
-      assertEquals(fileContent, new String(Files.readAllBytes(p)));
+      assertEquals(path, actual.getPath());
+      assertEquals(fileContent, actual.getContent());
     } finally {
       deleteCreatedFiles();
     }
   }
 
   @Test
-  public void givenPathIsValidAndFileExists_whenNoteIsSaved_thenContentIsUpdated() throws Exception {
-    var path = "a/valid/path/to/a/file";
-    var fileContent = RandomStringUtils.randomAscii(2048);
+  public void givenPathIsValidAndFileDoesNotExist_whenNoteIsSaved_thenFileIsCreatedWithNoteContent() throws Exception {
+    final var dirs = rootDir + "/" + userId + "/a/valid/path/to/a";
+    final var fullPath = dirs + "/file";
+    final var path = "a/valid/path/to/a/file";
+    final var fileContent = RandomStringUtils.randomAscii(2048);
 
     try {
-      var p = Paths.get(rootDir, userId.toString(), path);
-      Files.createDirectories(p.getParent());
-      Files.write(p, RandomStringUtils.randomAscii(2048).getBytes());
-
       mockMvc
           .perform(
               post("/note")
@@ -209,6 +195,9 @@ public class NoteControllerTest {
                       new Note(path, fileContent)
                   ))
           );
+
+      final var p = Paths.get(fullPath);
+      assertTrue(Files.exists(p));
 
       assertEquals(fileContent, new String(Files.readAllBytes(p)));
     } finally {
@@ -239,18 +228,55 @@ public class NoteControllerTest {
         .andExpect(status().isOk());
   }
 
-  private void deleteCreatedFiles() {
+  @Test
+  public void givenPathIsValidAndFileExists_whenNoteIsSaved_thenContentIsUpdated() throws Exception {
+    final var path = "a/valid/path/to/a/file";
+    final var fileContent = RandomStringUtils.randomAscii(2048);
+
     try {
-      var p = Paths.get(rootDir, userId);
-      if (Files.exists(p)) {
-        //noinspection ResultOfMethodCallIgnored
-        Files.walk(p)
-            .sorted(Comparator.reverseOrder())
-            .map(Path::toFile)
-            .forEach(File::delete);
-      }
-    } catch (IOException e) {
-      System.err.println("Created files could not be deleted. Root directory name: " + userId + ".");
+      final var p = Paths.get(rootDir, userId, path);
+      Files.createDirectories(p.getParent());
+      Files.write(p, RandomStringUtils.randomAscii(2048).getBytes());
+
+      mockMvc
+          .perform(
+              post("/note")
+                  .header(AUTHENTICATED_USER_ID, userId)
+                  .contentType("application/json")
+                  .content(new ObjectMapper().writeValueAsString(
+                      new Note(path, fileContent)
+                  ))
+          );
+
+      assertEquals(fileContent, new String(Files.readAllBytes(p)));
+    } finally {
+      deleteCreatedFiles();
+    }
+  }
+
+  @Test
+  public void givenPathIsValidAndNoteExists_whenNoteIsDeleted_thenFileAndEmptyParentDirectoriesAreDeleted() throws Exception {
+    final var path = "a/valid/path/to/a/file";
+    final var p = Paths.get(rootDir, userId, path);
+    final var extra = Paths.get(rootDir, userId, "extra");
+
+    try {
+      Files.createDirectories(p.getParent());
+      Files.createFile(p);
+      Files.createFile(extra);
+
+      mockMvc
+          .perform(
+              delete("/note")
+                  .header(AUTHENTICATED_USER_ID, userId)
+                  .param("path", "a/valid/path/to/a/file")
+          )
+          .andExpect(status().isOk());
+
+      assertFalse(Files.exists(p.getName(2)));
+      assertTrue(Files.exists(extra));
+    } finally {
+      deleteCreatedFiles();
     }
   }
 }
