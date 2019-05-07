@@ -1,22 +1,16 @@
 package hive.kirby.entity;
 
 public class PathNode {
-  private String name;
-  private PathNode[] children;
+  public final String name;
+  public final PathNode[] children;
 
-  public String getName() {
-    return name;
-  }
-
-  public void setName(final String name) {
+  public PathNode(String name) {
     this.name = name;
+    this.children = null;
   }
 
-  public PathNode[] getChildren() {
-    return children;
-  }
-
-  public void setChildren(final PathNode[] children) {
+  public PathNode(final String name, final PathNode[] children) {
+    this.name = name;
     this.children = children;
   }
 }
