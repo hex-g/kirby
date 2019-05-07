@@ -8,7 +8,7 @@ public class PathNode {
     return name;
   }
 
-  public void setName(String name) {
+  public void setName(final String name) {
     this.name = name;
   }
 
@@ -16,7 +16,7 @@ public class PathNode {
     return children;
   }
 
-  public void setChildren(PathNode[] children) {
+  public void setChildren(final PathNode[] children) {
     this.children = children;
   }
 }

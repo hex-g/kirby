@@ -16,7 +16,7 @@ public class Note {
     return path;
   }
 
-  public void setPath(String path) {
+  public void setPath(final String path) {
     this.path = path;
   }
 
@@ -24,7 +24,7 @@ public class Note {
     return content;
   }
 
-  public void setContent(String content) {
+  public void setContent(final String content) {
     this.content = content;
   }
 }
