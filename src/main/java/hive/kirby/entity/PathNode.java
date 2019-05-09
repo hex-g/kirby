@@ -24,6 +24,10 @@ public class PathNode {
     this.children = children;
   }
 
+  public static PathNode getEmptyDirInstance(String name) {
+    return new PathNode(name, new PathNode[0]);
+  }
+
   private PathNode[] getChildren(Path path) {
     try {
       final var children = new ArrayList<PathNode>();
@@ -39,9 +43,5 @@ public class PathNode {
     } catch (IOException e) {
       throw new RuntimeException();
     }
-  }
-
-  public static PathNode getEmptyDirInstance(String name) {
-    return new PathNode(name, new PathNode[0]);
   }
 }
