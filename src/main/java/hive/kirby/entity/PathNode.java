@@ -31,7 +31,7 @@ public class PathNode {
   private PathNode[] getChildren(Path path) {
     try {
       final var children = new ArrayList<PathNode>();
-      Files.list(path).forEach(e -> {
+      Files.walk(path, 1).skip(1).forEach(e -> {
         final var name = e.getFileName().toString();
         if (Files.isDirectory(e)) {
           children.add(new PathNode(name, getChildren(e)));
