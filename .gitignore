@@ -1,5 +1,6 @@
 ### Project ###
 /db/
+/kirby-storage/
 
 ### Spring Initializr ###
 HELP.md
@@ -44,4 +45,4 @@ hs_err_pid*
 ### Gradle ###
 .gradle
 build/
-!gradle/wrapper/gradle-wrapper.jar 
+!gradle/wrapper/gradle-wrapper.jar
